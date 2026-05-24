@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light editorial theme — warm off-white, deep ink, clay accent */
+:root {
+  --c-paper: 246 243 236;
+  --c-paper-50: 250 248 242;
+  --c-paper-100: 246 243 236;
+  --c-paper-200: 239 235 225;
+  --c-paper-300: 229 224 210;
+
+  --c-ink: 23 21 19;
+  --c-ink-900: 26 24 21;
+  --c-ink-800: 38 34 30;
+  --c-ink-700: 58 51 44;
+  --c-ink-600: 87 79 70;
+
+  --c-accent: 181 83 42;
+  --c-accent-50: 251 237 227;
+  --c-accent-100: 244 210 187;
+  --c-accent-200: 227 168 126;
+  --c-accent-300: 204 123 69;
+  --c-accent-400: 181 83 42;
+  --c-accent-500: 154 67 34;
+  --c-accent-600: 126 55 28;
+
+  --c-moss: 91 107 76;
+  --c-rust: 160 85 42;
+
+  /* Aliases consumed by raw CSS below */
+  --paper: rgb(var(--c-paper));
+  --ink: rgb(var(--c-ink));
+  --accent: rgb(var(--c-accent));
+
+  --sidebar-w: 232px;
+  --topbar-h: 60px;
+  --drawer-w: 460px;
+
+  /* Tunable surface helpers — used in raw CSS (scrollbar, grain, etc.) */
+  --surface-scrim: 23 21 19;
+  --surface-grain-alpha: 0.04;
+  --surface-shimmer-alpha: 0.06;
+
+  color-scheme: light;
+}
+
+/* Dark editorial theme — warm near-black, parchment ink, lifted clay accent */
+.dark {
+  --c-paper: 22 20 17;
+  --c-paper-50: 29 26 22;
+  --c-paper-100: 22 20 17;
+  --c-paper-200: 38 34 27;
+  --c-paper-300: 51 45 35;
+
+  --c-ink: 237 230 213;
+  --c-ink-900: 247 241 226;
+  --c-ink-800: 226 219 200;
+  --c-ink-700: 196 188 165;
+  --c-ink-600: 154 146 125;
+
+  --c-accent: 215 132 86;
+  --c-accent-50: 51 28 17;
+  --c-accent-100: 79 42 24;
+  --c-accent-200: 130 70 38;
+  --c-accent-300: 173 96 54;
+  --c-accent-400: 215 132 86;
+  --c-accent-500: 232 158 117;
+  --c-accent-600: 240 184 152;
+
+  --c-moss: 138 156 117;
+  --c-rust: 219 133 88;
+
+  --surface-scrim: 0 0 0;
+  --surface-grain-alpha: 0.05;
+  --surface-shimmer-alpha: 0.08;
+
+  color-scheme: dark;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: rgb(var(--c-accent) / 0.22);
+  color: rgb(var(--c-ink));
+}
+
+/* Editorial scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-ink) / 0.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-ink) / 0.2);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .serif {
+    font-family: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+    font-feature-settings: 'liga', 'dlig';
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .eyebrow {
+    @apply mono uppercase tracking-widest text-[10.5px] text-ink-600/80;
+  }
+
+  .field-hint {
+    @apply mono uppercase tracking-widest text-[10px] text-ink-600;
+  }
+
+  .divider {
+    @apply h-px w-full bg-ink/[0.07];
+  }
+
+  .divider-v {
+    @apply w-px h-full bg-ink/[0.07];
+  }
+
+  /* Hover surface — quiet */
+  .surface {
+    @apply bg-paper/60 backdrop-blur-[2px];
+  }
+
+  .ring-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
+  }
+
+  .grain {
+    background-image: radial-gradient(
+      rgb(var(--surface-scrim) / var(--surface-grain-alpha)) 1px,
+      transparent 1px
+    );
+    background-size: 3px 3px;
+  }
+
+  .checker {
+    background-image:
+      linear-gradient(45deg, rgb(var(--surface-scrim) / 0.04) 25%, transparent 25%),
+      linear-gradient(-45deg, rgb(var(--surface-scrim) / 0.04) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgb(var(--surface-scrim) / 0.04) 75%),
+      linear-gradient(-45deg, transparent 75%, rgb(var(--surface-scrim) / 0.04) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+
+  .shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(var(--surface-scrim) / var(--surface-shimmer-alpha)) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Masonry helper */
+  .masonry {
+    column-gap: 14px;
+  }
+  .masonry > * {
+    break-inside: avoid;
+    margin-bottom: 14px;
+  }
+}
+
+/* Chinese typography — prefer system Song/Ming serifs and Han Sans for body */
+:root[lang='zh'] body,
+html[lang='zh'] body {
+  font-family: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+}
+:root[lang='zh'] .serif,
+html[lang='zh'] .serif {
+  font-family: 'Cormorant Garamond', 'Songti SC', 'Source Han Serif SC', 'Noto Serif SC',
+    'STSong', Georgia, serif;
+  letter-spacing: 0;
+}
+:root[lang='zh'] .serif em,
+html[lang='zh'] .serif em {
+  font-style: normal;
+  color: rgb(var(--c-accent));
+}
+:root[lang='zh'] .mono,
+html[lang='zh'] .mono {
+  font-family: 'JetBrains Mono', 'PingFang SC', ui-monospace, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
