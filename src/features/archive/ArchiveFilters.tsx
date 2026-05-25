@@ -1,7 +1,9 @@
 import { Filter, Sparkles, X } from 'lucide-react'
 import { useFilters } from '@/stores/filterStore'
+import { useUi } from '@/stores/uiStore'
 import { cn, isLight } from '@/lib/utils'
 import { useT, useLang } from '@/lib/i18n'
+import { Drawer, DrawerContent } from '@/components/ui/Drawer'
 
 const styleTags = ['warm minimal', 'editorial', 'wabi-sabi', 'brutalist', 'quiet luxury', 'mid-century', '90s', 'y2k']
 const moodTags = ['calm', 'tactile', 'natural light', 'cool', 'romantic', 'contemplative', 'craft']
@@ -43,7 +45,7 @@ const tagZh: Record<string, string> = {
   palette: '色板',
 }
 
-const palette = [
+export const palette = [
   { hex: '#E9DBC3', name: 'Linen', zh: '亚麻', temp: 'warm' as const },
   { hex: '#C7B49A', name: 'Oak', zh: '橡木', temp: 'warm' as const },
   { hex: '#A47E55', name: 'Brass', zh: '黄铜', temp: 'warm' as const },
@@ -54,7 +56,13 @@ const palette = [
   { hex: '#B5532A', name: 'Clay', zh: '陶土', temp: 'warm' as const },
 ]
 
+export function tagDisplayLabel(label: string, lang: 'zh' | 'en'): string {
+  return lang === 'zh' ? tagZh[label] ?? label : label
+}
+
 export function ArchiveFilters() {
+  const filtersOpen = useUi((s) => s.filtersOpen)
+  const setFiltersOpen = useUi((s) => s.setFiltersOpen)
   const tagLabels = useFilters((s) => s.tagLabels)
   const toggleTag = useFilters((s) => s.toggleTag)
   const colorTemp = useFilters((s) => s.colorTemp)
@@ -72,123 +80,134 @@ export function ArchiveFilters() {
   const anyFilter =
     tagLabels.length || colorTemp || colorHex || rating || isFavorite
 
-  const displayTag = (l: string) => (lang === 'zh' ? tagZh[l] ?? l : l)
+  const displayTag = (l: string) => tagDisplayLabel(l, lang)
 
   return (
-    <aside className="w-64 shrink-0 border-r border-ink/[0.06] bg-paper-50/40 h-full overflow-y-auto">
-      <div className="sticky top-0 px-5 py-4 border-b border-ink/[0.06] bg-paper-50/80 backdrop-blur z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 text-ink-600" strokeWidth={1.7} />
-          <span className="eyebrow">{t('filters.refine')}</span>
-        </div>
-        {anyFilter ? (
-          <button
-            onClick={reset}
-            className="text-[11px] text-ink-600 hover:text-ink inline-flex items-center gap-1"
-          >
-            <X className="h-2.5 w-2.5" />
-            {t('filters.reset')}
-          </button>
-        ) : null}
-      </div>
-
-      <div className="px-5 py-5 space-y-7">
-        <FilterGroup title={t('filters.color_temperature')}>
-          <div className="flex gap-2">
-            {(['warm', 'cool', 'neutral'] as const).map((temp) => (
-              <button
-                key={temp}
-                onClick={() => setColorTemp(temp)}
-                className={cn(
-                  'flex-1 h-8 rounded-sm text-[11.5px] capitalize border transition-colors',
-                  colorTemp === temp
-                    ? 'bg-ink text-paper border-ink'
-                    : 'bg-paper text-ink-600 border-ink/[0.12] hover:border-ink/[0.24] hover:text-ink'
-                )}
-              >
-                {t(`filters.temp.${temp}`)}
-              </button>
-            ))}
+    <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
+      <DrawerContent side="left" width="320px" showClose={false}>
+        <div className="sticky top-0 px-5 py-4 border-b border-ink/[0.06] bg-paper/95 backdrop-blur z-10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5 text-ink-600" strokeWidth={1.7} />
+            <span className="eyebrow">{t('filters.refine')}</span>
           </div>
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.palette')}>
-          <div className="grid grid-cols-8 gap-1.5">
-            {palette.map((c) => (
+          <div className="flex items-center gap-3">
+            {anyFilter ? (
               <button
-                key={c.hex}
-                onClick={() => setColorHex(c.hex)}
-                title={`${lang === 'zh' ? c.zh : c.name} · ${c.hex}`}
-                className={cn(
-                  'h-6 w-6 rounded-full transition-transform ring-focus',
-                  colorHex === c.hex && 'ring-2 ring-ink ring-offset-2 ring-offset-paper-50'
-                )}
-                style={{
-                  background: c.hex,
-                  boxShadow: isLight(c.hex) ? 'inset 0 0 0 1px rgba(23,21,19,0.08)' : 'none',
-                }}
+                onClick={reset}
+                className="text-[11px] text-ink-600 hover:text-ink inline-flex items-center gap-1"
+              >
+                <X className="h-2.5 w-2.5" />
+                {t('filters.reset')}
+              </button>
+            ) : null}
+            <button
+              onClick={() => setFiltersOpen(false)}
+              className="h-6 w-6 inline-flex items-center justify-center rounded-xs text-ink-600 hover:text-ink hover:bg-ink/[0.06] ring-focus"
+              aria-label={t('common.close')}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
+          <FilterGroup title={t('filters.color_temperature')}>
+            <div className="flex gap-2">
+              {(['warm', 'cool', 'neutral'] as const).map((temp) => (
+                <button
+                  key={temp}
+                  onClick={() => setColorTemp(temp)}
+                  className={cn(
+                    'flex-1 h-8 rounded-sm text-[11.5px] capitalize border transition-colors',
+                    colorTemp === temp
+                      ? 'bg-ink text-paper border-ink'
+                      : 'bg-paper text-ink-600 border-ink/[0.12] hover:border-ink/[0.24] hover:text-ink'
+                  )}
+                >
+                  {t(`filters.temp.${temp}`)}
+                </button>
+              ))}
+            </div>
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.palette')}>
+            <div className="grid grid-cols-8 gap-1.5">
+              {palette.map((c) => (
+                <button
+                  key={c.hex}
+                  onClick={() => setColorHex(c.hex)}
+                  title={`${lang === 'zh' ? c.zh : c.name} · ${c.hex}`}
+                  className={cn(
+                    'h-6 w-6 rounded-full transition-transform ring-focus',
+                    colorHex === c.hex && 'ring-2 ring-ink ring-offset-2 ring-offset-paper'
+                  )}
+                  style={{
+                    background: c.hex,
+                    boxShadow: isLight(c.hex) ? 'inset 0 0 0 1px rgba(23,21,19,0.08)' : 'none',
+                  }}
+                />
+              ))}
+            </div>
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.style')}>
+            <ChipCloud labels={styleTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.mood')}>
+            <ChipCloud labels={moodTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.material')}>
+            <ChipCloud labels={materialTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.subject')}>
+            <ChipCloud labels={subjectTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
+          </FilterGroup>
+
+          <FilterGroup title={t('filters.rating')}>
+            <div className="flex gap-1.5">
+              {[3, 4, 5].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRating(r)}
+                  className={cn(
+                    'flex-1 h-8 rounded-sm text-[11.5px] border transition-colors',
+                    rating === r
+                      ? 'bg-ink text-paper border-ink'
+                      : 'bg-paper text-ink-600 border-ink/[0.12] hover:border-ink/[0.24]'
+                  )}
+                >
+                  {r}★ +
+                </button>
+              ))}
+            </div>
+            <label className="mt-2 flex items-center gap-2 text-[12px] text-ink-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isFavorite}
+                onChange={(e) => setFavorite(e.target.checked)}
+                className="accent-accent"
               />
-            ))}
+              {t('filters.favorites_only')}
+            </label>
+          </FilterGroup>
+
+          <div className="rounded-md border border-ink/[0.08] bg-paper-50/60 p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-accent mt-0.5" strokeWidth={2} />
+              <p className="text-[11.5px] text-ink-700 leading-snug">
+                {t('filters.profile_lens_card')}
+              </p>
+            </div>
+            <button className="mt-2 text-[11.5px] text-accent-600 hover:text-accent font-medium">
+              {t('filters.apply_profile_lens')}
+            </button>
           </div>
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.style')}>
-          <ChipCloud labels={styleTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.mood')}>
-          <ChipCloud labels={moodTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.material')}>
-          <ChipCloud labels={materialTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.subject')}>
-          <ChipCloud labels={subjectTags} active={tagLabels} onToggle={toggleTag} display={displayTag} />
-        </FilterGroup>
-
-        <FilterGroup title={t('filters.rating')}>
-          <div className="flex gap-1.5">
-            {[3, 4, 5].map((r) => (
-              <button
-                key={r}
-                onClick={() => setRating(r)}
-                className={cn(
-                  'flex-1 h-8 rounded-sm text-[11.5px] border transition-colors',
-                  rating === r
-                    ? 'bg-ink text-paper border-ink'
-                    : 'bg-paper text-ink-600 border-ink/[0.12] hover:border-ink/[0.24]'
-                )}
-              >
-                {r}★ +
-              </button>
-            ))}
-          </div>
-          <label className="mt-2 flex items-center gap-2 text-[12px] text-ink-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isFavorite}
-              onChange={(e) => setFavorite(e.target.checked)}
-              className="accent-accent"
-            />
-            {t('filters.favorites_only')}
-          </label>
-        </FilterGroup>
-
-        <div className="rounded-md border border-ink/[0.08] bg-paper p-3">
-          <div className="flex items-start gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-accent mt-0.5" strokeWidth={2} />
-            <p className="text-[11.5px] text-ink-700 leading-snug">
-              {t('filters.profile_lens_card')}
-            </p>
-          </div>
-          <button className="mt-2 text-[11.5px] text-accent-600 hover:text-accent font-medium">
-            {t('filters.apply_profile_lens')}
-          </button>
         </div>
-      </div>
-    </aside>
+      </DrawerContent>
+    </Drawer>
   )
 }
 

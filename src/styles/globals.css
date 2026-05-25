@@ -189,6 +189,14 @@ body {
     background-size: 200% 100%;
   }
 
+  /* Hide scrollbar but keep scroll (used for inline horizontal chip row) */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Masonry helper */
   .masonry {
     column-gap: 14px;

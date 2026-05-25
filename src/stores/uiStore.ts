@@ -29,7 +29,7 @@ export const useUi = create<UiState>((set) => ({
   uploadDialogOpen: false,
   collectionPickerOpen: false,
   pendingPickAssetIds: [],
-  filtersOpen: true,
+  filtersOpen: false,
 
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
   openAssetDetail: (assetId) => set({ assetDetailOpen: true, activeAssetId: assetId }),

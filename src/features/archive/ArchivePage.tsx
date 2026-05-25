@@ -57,62 +57,70 @@ export function ArchivePage() {
   }
 
   return (
-    <div className="flex h-full">
-      {ui.filtersOpen && <ArchiveFilters />}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <ArchiveToolbar count={result.total} />
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="px-7 py-6">
-            {/* Editorial section header */}
-            <header className="mb-6 flex items-end justify-between">
-              <div>
-                <div className="eyebrow mb-2">{t('archive.eyebrow')}</div>
-                <h1 className="serif text-[42px] leading-none tracking-editorial text-ink">
-                  {t('archive.title_part1')} <em className="italic">{t('archive.title_em')}</em>{t('archive.title_part2')}
-                </h1>
-                <p className="text-[13.5px] text-ink-600 mt-2 max-w-xl">
-                  {t('archive.body')}
-                </p>
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Editorial section header — page identity, breathes */}
+        <header className="px-7 pt-12 pb-10 max-w-[1400px]">
+          <div className="flex items-end justify-between gap-8">
+            <div>
+              <div className="eyebrow mb-3">{t('archive.eyebrow')}</div>
+              <h1 className="serif text-[52px] leading-[1.02] tracking-editorial text-ink">
+                {t('archive.title_part1')}
+                <em className="italic">{t('archive.title_em')}</em>
+                {t('archive.title_part2')}
+              </h1>
+              <p className="text-[13.5px] text-ink-600 mt-4 max-w-md leading-relaxed">
+                {t('archive.body')}
+              </p>
+            </div>
+            <div className="text-right hidden md:block shrink-0">
+              <div className="mono text-[10px] uppercase tracking-widest text-ink-600/70">
+                {t('common.today')}
               </div>
-              <div className="text-right hidden md:block">
-                <div className="mono text-[10px] uppercase tracking-widest text-ink-600">{t('common.today')}</div>
-                <div className="serif text-[18px] italic tracking-editorial text-ink-700">
-                  {new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </div>
+              <div className="serif text-[16px] italic tracking-editorial text-ink-700 mt-1">
+                {new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
               </div>
-            </header>
-
-            {result.items.length === 0 ? (
-              <EmptyState
-                icon={<ArchiveIcon className="h-5 w-5" strokeWidth={1.6} />}
-                title={t('archive.empty_title')}
-                description={t('archive.empty_desc')}
-                actions={
-                  <Button variant="primary" size="sm" onClick={() => ui.setUploadDialogOpen(true)}>
-                    <UploadCloud className="h-3.5 w-3.5" />
-                    {t('archive.empty_action')}
-                  </Button>
-                }
-              />
-            ) : (
-              <AssetMasonry
-                assets={result.items}
-                selectedIds={sel.selectedAssetIds}
-                onOpen={(id) => ui.openAssetDetail(id)}
-                onSelect={onSelect}
-                onAddToCollection={(id) => ui.openCollectionPicker([id])}
-                onToggleFavorite={(id) => assetAdapter.toggleFavorite(id)}
-                layout={filters.layout}
-                columns={filters.layout === 'bento' ? 6 : 5}
-              />
-            )}
+            </div>
           </div>
+        </header>
+
+        {/* Toolbar sticks once the hero scrolls past */}
+        <ArchiveToolbar count={result.total} />
+
+        <div className="px-7 pt-5 pb-12">
+          {result.items.length === 0 ? (
+            <EmptyState
+              icon={<ArchiveIcon className="h-5 w-5" strokeWidth={1.6} />}
+              title={t('archive.empty_title')}
+              description={t('archive.empty_desc')}
+              actions={
+                <Button variant="primary" size="sm" onClick={() => ui.setUploadDialogOpen(true)}>
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  {t('archive.empty_action')}
+                </Button>
+              }
+            />
+          ) : (
+            <AssetMasonry
+              assets={result.items}
+              selectedIds={sel.selectedAssetIds}
+              onOpen={(id) => ui.openAssetDetail(id)}
+              onSelect={onSelect}
+              onAddToCollection={(id) => ui.openCollectionPicker([id])}
+              onToggleFavorite={(id) => assetAdapter.toggleFavorite(id)}
+              layout={filters.layout}
+              columns={filters.layout === 'bento' ? 6 : 5}
+            />
+          )}
         </div>
       </div>
+
+      {/* Filters render as a left-side drawer overlay, opt-in */}
+      <ArchiveFilters />
     </div>
   )
 }

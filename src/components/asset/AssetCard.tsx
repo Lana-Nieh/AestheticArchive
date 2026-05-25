@@ -121,9 +121,12 @@ function AssetCardBase({
           </IconBtn>
         </div>
 
-        {/* Persistent corner badges */}
+        {/* Persistent corner badge — quiet ink dot, reserved for favorites */}
         {asset.isFavorite && (
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-accent group-hover:opacity-0 transition-opacity" />
+          <span
+            className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-ink/70 group-hover:opacity-0 transition-opacity"
+            aria-hidden
+          />
         )}
 
         {/* Bottom overlay on hover — colors + tags */}
@@ -165,26 +168,15 @@ function AssetCardBase({
         </div>
       </div>
 
-      {/* Below-card metadata */}
-      <div className="px-1 mt-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[12.5px] text-ink truncate">{asset.title}</h3>
-          {asset.rating && (
-            <span className="mono text-[10px] text-ink-600 inline-flex items-center gap-0.5">
-              <Star className="h-2.5 w-2.5 fill-ink-700 text-ink-700" />
-              {asset.rating}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 mt-1">
-          {asset.colors.slice(0, 4).map((c) => (
-            <span
-              key={c.hex}
-              className="h-1.5 flex-1 rounded-full"
-              style={{ background: c.hex, opacity: 0.85 }}
-            />
-          ))}
-        </div>
+      {/* Below-card metadata — title only, rating revealed on hover */}
+      <div className="px-1 mt-2 flex items-center justify-between gap-2">
+        <h3 className="text-[12px] text-ink-600 truncate">{asset.title}</h3>
+        {asset.rating ? (
+          <span className="mono text-[10px] text-ink-600/0 group-hover:text-ink-600/80 transition-colors inline-flex items-center gap-0.5 shrink-0">
+            <Star className="h-2.5 w-2.5 fill-current" />
+            {asset.rating}
+          </span>
+        ) : null}
       </div>
     </div>
   )
