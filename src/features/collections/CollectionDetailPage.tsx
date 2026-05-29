@@ -16,10 +16,13 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { collectionAdapter, subscribeCollections } from '@/data/adapters/collectionAdapter'
 import { assetAdapter, subscribeAssets } from '@/data/adapters/assetAdapter'
+import { projectAdapter } from '@/data/adapters/projectAdapter'
 import { useSelection } from '@/stores/selectionStore'
 import { useUi } from '@/stores/uiStore'
 import { isLight } from '@/lib/utils'
 import { useT, useRelativeTime } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
+import { copyText } from '@/lib/mockActions'
 
 export function CollectionDetailPage() {
   const { collectionId } = useParams()
@@ -72,6 +75,71 @@ export function CollectionDetailPage() {
     else sel.selectOne(id)
   }
 
+  const generateMoodboard = () => {
+    const project = projectAdapter.createProject({
+      name: collection.name,
+      description: collection.description,
+      status: 'exploring',
+      assetIds: collection.assetIds,
+      coverAssetId: collection.coverAssetIds[0] ?? collection.assetIds[0],
+    })
+    toast.curator(
+      t('mock.generate_moodboard.title'),
+      t('mock.generate_moodboard.desc', { n: collection.assetIds.length })
+    )
+    navigate(`/projects/${project.id}`)
+  }
+
+  const createBrief = () => {
+    toast.curator(t('mock.create_brief.title'), t('mock.create_brief.desc'))
+  }
+
+  const renameCollection = () => {
+    const name = window.prompt(t('prompt.collection_rename'), collection.name)
+    const trimmed = name?.trim()
+    if (!trimmed || trimmed === collection.name) return
+    collectionAdapter.update(collection.id, { name: trimmed })
+    toast.success(t('mock.rename.title'), trimmed)
+  }
+
+  const splitCollection = () => {
+    toast.curator(
+      t('mock.split_collection.title'),
+      t('mock.split_collection.desc')
+    )
+  }
+
+  const shareCollection = () => {
+    const url = `${window.location.origin}/collections/${collection.id}`
+    copyText(url, t('mock.shared'))
+  }
+
+  const exportCollection = () => {
+    toast.mock(
+      t('mock.collection_export.title'),
+      t('mock.collection_export.desc')
+    )
+  }
+
+  const editSuggestionName = () => renameCollection()
+
+  const ignoreSuggestion = () => {
+    collectionAdapter.remove(collection.id)
+    toast.mock(
+      t('mock.suggestion_ignored.title'),
+      t('mock.suggestion_ignored.desc')
+    )
+    navigate('/collections')
+  }
+
+  const addFromArchive = () => {
+    toast.curator(
+      t('mock.add_from_archive.title'),
+      t('mock.add_from_archive.desc')
+    )
+    navigate('/archive')
+  }
+
   return (
     <div>
       {/* Editorial cover header */}
@@ -103,27 +171,27 @@ export function CollectionDetailPage() {
             )}
 
             <div className="mt-6 flex items-center gap-2 flex-wrap">
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={generateMoodboard}>
                 <Wand2 className="h-3.5 w-3.5" />
                 {t('cdetail.generate_moodboard')}
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={createBrief}>
                 <FileDown className="h-3.5 w-3.5" />
                 {t('cdetail.create_brief')}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={renameCollection}>
                 <Pencil className="h-3.5 w-3.5" />
                 {t('cdetail.rename')}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={splitCollection}>
                 <Split className="h-3.5 w-3.5" />
                 {t('cdetail.split')}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={shareCollection}>
                 <Share2 className="h-3.5 w-3.5" />
                 {t('cdetail.share')}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={exportCollection}>
                 <Download className="h-3.5 w-3.5" />
                 {t('cdetail.export')}
               </Button>
@@ -145,8 +213,8 @@ export function CollectionDetailPage() {
                   >
                     {t('cdetail.accept_shelf')}
                   </Button>
-                  <Button variant="ghost" size="xs">{t('cdetail.edit_name')}</Button>
-                  <Button variant="ghost" size="xs">{t('cdetail.ignore')}</Button>
+                  <Button variant="ghost" size="xs" onClick={editSuggestionName}>{t('cdetail.edit_name')}</Button>
+                  <Button variant="ghost" size="xs" onClick={ignoreSuggestion}>{t('cdetail.ignore')}</Button>
                 </div>
               </div>
             )}
@@ -194,7 +262,7 @@ export function CollectionDetailPage() {
       <div className="px-7 py-8">
         <div className="flex items-center justify-between mb-5">
           <h2 className="eyebrow">{t('cdetail.assets_in_shelf')}</h2>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={addFromArchive}>
             <Plus className="h-3.5 w-3.5" />
             {t('cdetail.add_from_archive')}
           </Button>

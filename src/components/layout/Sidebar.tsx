@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Archive,
   FolderOpen,
@@ -11,19 +12,10 @@ import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import { ThemeLanguageSwitcher } from '@/components/ui/Switcher'
 import { useT, useLang } from '@/lib/i18n'
-
-// Two visual groups: "browse" (where my stuff lives) and "do" (tools that act on it).
-// Search is intentionally NOT here — the topbar search input is the canonical entry.
-const browseNav = [
-  { to: '/archive', labelKey: 'nav.archive', icon: Archive, meta: '1,248' },
-  { to: '/collections', labelKey: 'nav.collections', icon: FolderOpen, meta: '12' },
-  { to: '/projects', labelKey: 'nav.projects', icon: Layers, meta: '2' },
-] as const
-
-const toolsNav = [
-  { to: '/profile', labelKey: 'nav.profile', icon: Compass },
-  { to: '/agent', labelKey: 'nav.agent', icon: Sparkles, dot: 6 },
-] as const
+import { collectionAdapter, subscribeCollections } from '@/data/adapters/collectionAdapter'
+import { assetAdapter, subscribeAssets } from '@/data/adapters/assetAdapter'
+import { projectAdapter, subscribeProjects } from '@/data/adapters/projectAdapter'
+import { toast } from '@/components/ui/Toast'
 
 const shelves = [
   { label: 'Quiet Luxury Interiors', zh: '静奢室内', to: '/collections/col_001', count: 6 },
@@ -34,6 +26,59 @@ const shelves = [
 
 export function Sidebar() {
   const t = useT()
+  const navigate = useNavigate()
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const u1 = subscribeAssets(() => setTick((x) => x + 1))
+    const u2 = subscribeCollections(() => setTick((x) => x + 1))
+    const u3 = subscribeProjects(() => setTick((x) => x + 1))
+    return () => {
+      u1?.()
+      u2?.()
+      u3?.()
+    }
+  }, [])
+
+  const assetCount = assetAdapter.list().total
+  const collectionCount = collectionAdapter.list().length
+  const projectCount = projectAdapter.listProjects().length
+
+  const browseNav = [
+    {
+      to: '/archive',
+      labelKey: 'nav.archive',
+      icon: Archive,
+      meta: assetCount.toLocaleString(),
+    },
+    {
+      to: '/collections',
+      labelKey: 'nav.collections',
+      icon: FolderOpen,
+      meta: String(collectionCount),
+    },
+    {
+      to: '/projects',
+      labelKey: 'nav.projects',
+      icon: Layers,
+      meta: String(projectCount),
+    },
+  ] as const
+
+  // Agent dot: count of mock pending/previewing tasks that haven't been actioned.
+  // Stays static for the prototype — synced from mock data shape.
+  const toolsNav = [
+    { to: '/profile', labelKey: 'nav.profile', icon: Compass },
+    { to: '/agent', labelKey: 'nav.agent', icon: Sparkles, dot: 4 },
+  ] as const
+
+  const newShelf = () => {
+    const name = window.prompt(t('prompt.collection_name'), '')
+    const trimmed = name?.trim()
+    if (!trimmed) return
+    const c = collectionAdapter.create({ name: trimmed })
+    toast.success(t('mock.rename.title'), trimmed)
+    navigate(`/collections/${c.id}`)
+  }
 
   return (
     <aside className="flex flex-col h-full w-[var(--sidebar-w)] shrink-0 border-r border-ink/[0.06] bg-paper-50">
@@ -58,7 +103,14 @@ export function Sidebar() {
 
         <div className="mt-8 mb-3 flex items-center justify-between px-2.5">
           <span className="eyebrow">{t('nav.shelves')}</span>
-          <button className="text-ink-600 hover:text-ink text-[10.5px] mono">+</button>
+          <button
+            onClick={newShelf}
+            className="text-ink-600 hover:text-ink text-[10.5px] mono ring-focus rounded-xs px-1"
+            aria-label={t('collections.new')}
+            title={t('collections.new')}
+          >
+            +
+          </button>
         </div>
         <ul className="space-y-0.5">
           {shelves.map((s) => (

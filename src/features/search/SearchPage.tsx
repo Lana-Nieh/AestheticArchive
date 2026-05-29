@@ -9,6 +9,7 @@ import { assetAdapter } from '@/data/adapters/assetAdapter'
 import { useSelection } from '@/stores/selectionStore'
 import { useUi } from '@/stores/uiStore'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 const exampleKeys = [
   'search.example.1',
@@ -67,7 +68,18 @@ export function SearchPage() {
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setProfileLens((v) => !v)}
+              onClick={() => {
+                setProfileLens((v) => {
+                  const next = !v
+                  if (next) {
+                    toast.curator(
+                      t('mock.profile_lens.title'),
+                      t('mock.profile_lens.desc')
+                    )
+                  }
+                  return next
+                })
+              }}
               className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-[12px] transition-colors ${
                 profileLens
                   ? 'bg-accent/[0.1] border-accent/30 text-accent-600'
@@ -118,9 +130,21 @@ export function SearchPage() {
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ExplainGroup title={t('search.matched_moods')} items={result.explanation.matchedMoods} />
-                  <ExplainGroup title={t('search.matched_tags')} items={result.explanation.matchedTags} />
-                  <ExplainGroup title={t('search.matched_colors')} items={result.explanation.matchedColors} />
+                  <ExplainGroup
+                    title={t('search.matched_moods')}
+                    items={result.explanation.matchedMoods}
+                    onClick={(s) => navigate(`/search?q=${encodeURIComponent(s)}`)}
+                  />
+                  <ExplainGroup
+                    title={t('search.matched_tags')}
+                    items={result.explanation.matchedTags}
+                    onClick={(s) => navigate(`/search?q=${encodeURIComponent(s)}`)}
+                  />
+                  <ExplainGroup
+                    title={t('search.matched_colors')}
+                    items={result.explanation.matchedColors}
+                    onClick={(s) => navigate(`/search?q=${encodeURIComponent(s)}`)}
+                  />
                 </div>
 
                 {result.suggestedRefinements.length > 0 && (
@@ -191,7 +215,15 @@ export function SearchPage() {
   )
 }
 
-function ExplainGroup({ title, items }: { title: string; items: string[] }) {
+function ExplainGroup({
+  title,
+  items,
+  onClick,
+}: {
+  title: string
+  items: string[]
+  onClick: (s: string) => void
+}) {
   if (items.length === 0) return (
     <div>
       <div className="eyebrow mb-1.5">{title}</div>
@@ -203,9 +235,16 @@ function ExplainGroup({ title, items }: { title: string; items: string[] }) {
       <div className="eyebrow mb-1.5">{title}</div>
       <div className="flex flex-wrap gap-1">
         {items.map((s) => (
-          <Badge key={s} variant="soft" size="sm">
-            {s}
-          </Badge>
+          <button
+            key={s}
+            type="button"
+            onClick={() => onClick(s)}
+            className="ring-focus rounded-sm"
+          >
+            <Badge variant="soft" size="sm" className="hover:bg-ink/[0.07] transition-colors cursor-pointer">
+              {s}
+            </Badge>
+          </button>
         ))}
       </div>
     </div>

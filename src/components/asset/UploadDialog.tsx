@@ -7,6 +7,7 @@ import { assetAdapter } from '@/data/adapters/assetAdapter'
 import { uid } from '@/lib/utils'
 import type { Asset } from '@/lib/types'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 type Pending = {
   id: string
@@ -140,7 +141,19 @@ export function UploadDialog() {
                   <ImageIcon className="h-3.5 w-3.5" />
                   {t('upload.choose')}
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    const url = window.prompt(t('prompt.url'), '')
+                    if (!url?.trim()) return
+                    toast.curator(
+                      t('mock.url_import.title'),
+                      t('mock.url_import.desc')
+                    )
+                  }}
+                >
                   <Link2 className="h-3.5 w-3.5" />
                   {t('upload.paste_url')}
                 </Button>

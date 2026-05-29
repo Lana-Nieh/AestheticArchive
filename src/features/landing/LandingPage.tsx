@@ -15,6 +15,7 @@ import { mockAssets } from '@/data/mock/assets'
 import { mockProfile } from '@/data/mock/profile'
 import { isLight } from '@/lib/utils'
 import { useT, useLang } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 const heroLeft = ['a_001', 'a_005', 'a_023']
 const heroRight = ['a_010', 'a_006', 'a_018']
@@ -296,8 +297,27 @@ function HeroComposition() {
           {t('landing.curator_card')}
         </p>
         <div className="mt-3 flex items-center gap-2">
-          <Button variant="primary" size="xs">{t('landing.curator_save')}</Button>
-          <Button variant="ghost" size="xs">{t('common.edit')}</Button>
+          <Button
+            variant="primary"
+            size="xs"
+            onClick={() =>
+              toast.success(
+                t('mock.curator_save.title'),
+                t('landing.curator_card')
+              )
+            }
+          >
+            {t('landing.curator_save')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() =>
+              toast.curator(t('mock.curator_edit.title'), t('mock.not_yet'))
+            }
+          >
+            {t('common.edit')}
+          </Button>
         </div>
       </div>
     </div>
@@ -434,13 +454,14 @@ function ProfilePreview() {
             <div className="eyebrow mb-2">{t('landing.profile_preview.style_memory')}</div>
             <div className="flex flex-wrap gap-1.5">
               {mockProfile.styleKeywords.slice(0, 6).map((k) => (
-                <span
+                <Link
                   key={k.label}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-sm border border-ink/[0.1] bg-paper-50 serif tracking-editorial text-ink"
+                  to={`/search?q=${encodeURIComponent(k.label)}`}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-sm border border-ink/[0.1] bg-paper-50 serif tracking-editorial text-ink hover:border-ink/[0.24] transition-colors ring-focus"
                   style={{ fontSize: 12 + Math.round(k.weight * 6) }}
                 >
                   {translateStyle(k.label)}
-                </span>
+                </Link>
               ))}
             </div>
           </div>

@@ -4,6 +4,8 @@ import { useUi } from '@/stores/uiStore'
 import { cn, isLight } from '@/lib/utils'
 import { useT, useLang } from '@/lib/i18n'
 import { Drawer, DrawerContent } from '@/components/ui/Drawer'
+import { profileAdapter } from '@/data/adapters/profileAdapter'
+import { toast } from '@/components/ui/Toast'
 
 const styleTags = ['warm minimal', 'editorial', 'wabi-sabi', 'brutalist', 'quiet luxury', 'mid-century', '90s', 'y2k']
 const moodTags = ['calm', 'tactile', 'natural light', 'cool', 'romantic', 'contemplative', 'craft']
@@ -81,6 +83,25 @@ export function ArchiveFilters() {
     tagLabels.length || colorTemp || colorHex || rating || isFavorite
 
   const displayTag = (l: string) => tagDisplayLabel(l, lang)
+
+  const applyProfileLens = () => {
+    const profile = profileAdapter.get()
+    const pinnedStyle = profile.styleKeywords.filter((k) => k.pinned && !k.hidden)
+    const heavy = profile.styleKeywords
+      .filter((k) => !k.hidden && k.weight >= 0.5)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3)
+    const chosen = (pinnedStyle.length ? pinnedStyle : heavy).map((k) => k.label)
+    const knownStyle = new Set(styleTags)
+    const matched = chosen.filter((l) => knownStyle.has(l))
+    matched.forEach((l) => {
+      if (!tagLabels.includes(l)) toggleTag(l)
+    })
+    const topColor = profile.colorPreferences[0]
+    if (topColor) setColorHex(topColor.hex)
+    setFiltersOpen(false)
+    toast.curator(t('mock.profile_lens.title'), t('mock.profile_lens.desc'))
+  }
 
   return (
     <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -201,7 +222,10 @@ export function ArchiveFilters() {
                 {t('filters.profile_lens_card')}
               </p>
             </div>
-            <button className="mt-2 text-[11.5px] text-accent-600 hover:text-accent font-medium">
+            <button
+              onClick={applyProfileLens}
+              className="mt-2 text-[11.5px] text-accent-600 hover:text-accent font-medium ring-focus rounded-xs px-1 -mx-1"
+            >
               {t('filters.apply_profile_lens')}
             </button>
           </div>

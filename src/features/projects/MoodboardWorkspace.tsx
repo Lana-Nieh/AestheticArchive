@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
   Wand2,
@@ -34,19 +34,23 @@ import { Badge } from '@/components/ui/Badge'
 import { projectAdapter, subscribeProjects } from '@/data/adapters/projectAdapter'
 import { assetAdapter } from '@/data/adapters/assetAdapter'
 import { isLight } from '@/lib/utils'
-import type { Asset } from '@/lib/types'
+import type { Asset, CreativeBrief } from '@/lib/types'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
+import { copyText } from '@/lib/mockActions'
 
 export function MoodboardWorkspace() {
   const { projectId } = useParams()
   const [, setTick] = useState(0)
   useEffect(() => subscribeProjects(() => setTick((x) => x + 1)), [])
   const t = useT()
+  const navigate = useNavigate()
 
   const project = useMemo(() => projectAdapter.getProject(projectId ?? ''), [projectId])
   const moodboard = useMemo(() => projectAdapter.getMoodboard(project?.moodboardId), [project])
 
   const [order, setOrder] = useState<string[]>([])
+  const [suggestionVisible, setSuggestionVisible] = useState(true)
   useEffect(() => {
     if (moodboard) setOrder(moodboard.items.map((i) => i.assetId))
   }, [moodboard?.id])
@@ -72,10 +76,107 @@ export function MoodboardWorkspace() {
     if (!over || active.id === over.id) return
     const oldIndex = order.indexOf(String(active.id))
     const newIndex = order.indexOf(String(over.id))
-    setOrder((o) => arrayMove(o, oldIndex, newIndex))
+    const next = arrayMove(order, oldIndex, newIndex)
+    setOrder(next)
+    // Persist the new ordering to the moodboard if one exists.
+    if (moodboard) {
+      const map = new Map(moodboard.items.map((it) => [it.assetId, it]))
+      const items = next
+        .map((id, i) => {
+          const existing = map.get(id)
+          return existing ? { ...existing, zIndex: i } : null
+        })
+        .filter(Boolean) as typeof moodboard.items
+      projectAdapter.updateMoodboard(moodboard.id, items)
+    }
+  }
+
+  const removeCell = (assetId: string) => {
+    const next = order.filter((id) => id !== assetId)
+    setOrder(next)
+    if (moodboard) {
+      const items = moodboard.items.filter((it) => it.assetId !== assetId)
+      projectAdapter.updateMoodboard(moodboard.id, items)
+    }
+    toast.mock(t('mock.remove_moodboard_cell.title'))
   }
 
   const brief = project.brief
+
+  const askCurator = () => {
+    toast.curator(t('mock.ask_curator.title'), t('mock.ask_curator.desc'))
+    navigate('/agent')
+  }
+
+  const shareBoard = () => {
+    const url = `${window.location.origin}/projects/${project.id}`
+    copyText(url, t('mock.shared'))
+  }
+
+  const exportBoard = () => {
+    toast.mock(t('mock.exported'), t('mock.exported_desc'))
+  }
+
+  const previewSplit = () => {
+    toast.curator(t('mock.curator_split.title'))
+  }
+
+  const dismissCuratorSuggestion = () => {
+    setSuggestionVisible(false)
+    toast({ kind: 'mock', title: t('mock.curator_dismiss.title') })
+  }
+
+  const addCell = () => {
+    toast.curator(
+      t('mock.add_moodboard_cell.title'),
+      t('mock.add_moodboard_cell.desc')
+    )
+    navigate('/archive')
+  }
+
+  const copyBrief = () => {
+    if (!brief) return
+    const text = serializeBrief(brief)
+    copyText(text, t('mock.copied'))
+  }
+
+  const exportPdf = () => {
+    toast.mock(t('mock.export_brief.pdf.title'), t('mock.exported_desc'))
+  }
+
+  const exportMarkdown = () => {
+    if (brief) copyText(serializeBrief(brief), t('mock.export_brief.md.title'))
+    else toast.mock(t('mock.export_brief.md.title'))
+  }
+
+  const exportImage = () => {
+    toast.mock(t('mock.export_brief.img.title'), t('mock.exported_desc'))
+  }
+
+  const generateBrief = () => {
+    const draft: CreativeBrief = {
+      title: project.name,
+      mood: project.description ?? 'Calm, tactile, editorial.',
+      visualKeywords: ['warm minimal', 'natural light', 'oak', 'linen', 'brass'],
+      colorDirection:
+        'Warm off-white grounded by oak and brass; deep ink as anchor. Avoid pure black.',
+      typographyDirection:
+        'Editorial serif for headlines, low-contrast humanist sans for body.',
+      imageDirection:
+        'Natural daylight, soft shadow, a single hero subject. No staged lifestyle.',
+      layoutDirection:
+        'Generous left margin, slow rhythm, eyebrow + display + caption.',
+      materials: ['oak', 'linen', 'unglazed ceramic', 'brushed brass'],
+      composition: 'Centered subject, breathing room, asymmetric tension on one corner.',
+      avoid: ['cool grays', 'glossy plastic', 'busy gradients'],
+      prompt:
+        'editorial still life · warm minimal · oak + linen + brushed brass · natural daylight · soft shadow · single subject',
+      notes:
+        'Draft from curator. Edit any section freely — your edits update the prompt.',
+    }
+    projectAdapter.updateProject(project.id, { brief: draft })
+    toast.curator(t('mock.generate_brief.title'), t('mock.generate_brief.desc'))
+  }
 
   return (
     <div className="flex h-full">
@@ -93,15 +194,15 @@ export function MoodboardWorkspace() {
             <Badge variant="soft" size="xs">{t('mb.refs', { n: items.length })}</Badge>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={askCurator}>
               <Wand2 className="h-3.5 w-3.5" />
               {t('mb.ask_curator')}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={shareBoard}>
               <Share2 className="h-3.5 w-3.5" />
               {t('mb.share')}
             </Button>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" onClick={exportBoard}>
               <Download className="h-3.5 w-3.5" />
               {t('mb.export')}
             </Button>
@@ -112,27 +213,38 @@ export function MoodboardWorkspace() {
         <div className="flex-1 min-h-0 overflow-y-auto bg-paper-50">
           <div className="px-7 py-7">
             {/* AI suggestions strip */}
-            <div className="mb-6 rounded-md border border-accent/15 bg-accent/[0.04] p-3.5 flex items-start gap-3">
-              <Sparkles className="h-4 w-4 text-accent mt-0.5" strokeWidth={2} />
-              <div className="flex-1">
-                <div className="eyebrow text-accent-600 mb-1">{t('mb.curator_suggestion')}</div>
-                <p className="serif italic text-[14.5px] tracking-editorial text-ink-800">
-                  {t('mb.curator_suggestion_text')}
-                </p>
+            {suggestionVisible && (
+              <div className="mb-6 rounded-md border border-accent/15 bg-accent/[0.04] p-3.5 flex items-start gap-3">
+                <Sparkles className="h-4 w-4 text-accent mt-0.5" strokeWidth={2} />
+                <div className="flex-1">
+                  <div className="eyebrow text-accent-600 mb-1">{t('mb.curator_suggestion')}</div>
+                  <p className="serif italic text-[14.5px] tracking-editorial text-ink-800">
+                    {t('mb.curator_suggestion_text')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button variant="secondary" size="xs" onClick={previewSplit}>{t('mb.preview_split')}</Button>
+                  <Button variant="ghost" size="xs" onClick={dismissCuratorSuggestion}>{t('mb.dismiss')}</Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="secondary" size="xs">{t('mb.preview_split')}</Button>
-                <Button variant="ghost" size="xs">{t('mb.dismiss')}</Button>
-              </div>
-            </div>
+            )}
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
               <SortableContext items={order} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-4 gap-3.5 auto-rows-[120px]">
                   {items.map((a, i) => (
-                    <MoodboardCell key={a.id} asset={a} span={i === 0 ? 'large' : 'normal'} />
+                    <MoodboardCell
+                      key={a.id}
+                      asset={a}
+                      span={i === 0 ? 'large' : 'normal'}
+                      onRemove={() => removeCell(a.id)}
+                    />
                   ))}
-                  <button className="border border-dashed border-ink/[0.2] rounded-md flex items-center justify-center text-ink-600 hover:text-ink hover:border-ink/[0.4] transition-colors">
+                  <button
+                    type="button"
+                    onClick={addCell}
+                    className="border border-dashed border-ink/[0.2] rounded-md flex items-center justify-center text-ink-600 hover:text-ink hover:border-ink/[0.4] transition-colors ring-focus"
+                  >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
@@ -150,7 +262,7 @@ export function MoodboardWorkspace() {
             <span className="eyebrow">{t('mb.creative_brief')}</span>
             {brief && <Badge variant="ai" size="xs">{t('mb.draft')}</Badge>}
           </div>
-          <Button variant="ghost" size="xs">
+          <Button variant="ghost" size="xs" onClick={copyBrief} disabled={!brief}>
             <Copy className="h-3 w-3" />
             {t('mb.copy')}
           </Button>
@@ -245,12 +357,12 @@ export function MoodboardWorkspace() {
               )}
 
               <div className="border-t border-ink/[0.06] pt-4 flex items-center gap-2">
-                <Button variant="primary" size="sm">
+                <Button variant="primary" size="sm" onClick={exportPdf}>
                   <Download className="h-3.5 w-3.5" />
                   {t('mb.export_pdf')}
                 </Button>
-                <Button variant="secondary" size="sm">{t('mb.markdown')}</Button>
-                <Button variant="ghost" size="sm">{t('mb.image')}</Button>
+                <Button variant="secondary" size="sm" onClick={exportMarkdown}>{t('mb.markdown')}</Button>
+                <Button variant="ghost" size="sm" onClick={exportImage}>{t('mb.image')}</Button>
               </div>
             </article>
           ) : (
@@ -259,7 +371,7 @@ export function MoodboardWorkspace() {
               <p className="serif italic text-[16px] tracking-editorial text-ink-700">
                 {t('mb.empty')}
               </p>
-              <Button variant="primary" size="sm" className="mt-4">
+              <Button variant="primary" size="sm" className="mt-4" onClick={generateBrief}>
                 {t('mb.generate_brief')}
               </Button>
             </div>
@@ -270,10 +382,20 @@ export function MoodboardWorkspace() {
   )
 }
 
-function MoodboardCell({ asset, span }: { asset: Asset; span: 'normal' | 'large' }) {
+function MoodboardCell({
+  asset,
+  span,
+  onRemove,
+}: {
+  asset: Asset
+  span: 'normal' | 'large'
+  onRemove: () => void
+}) {
   const t = useT()
+  const [locked, setLocked] = useState(false)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: asset.id,
+    disabled: locked,
   })
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -282,7 +404,6 @@ function MoodboardCell({ asset, span }: { asset: Asset; span: 'normal' | 'large'
     gridColumn: span === 'large' ? 'span 2' : undefined,
     gridRow: span === 'large' ? 'span 2' : undefined,
   }
-  const [locked, setLocked] = useState(false)
   return (
     <div
       ref={setNodeRef}
@@ -295,7 +416,9 @@ function MoodboardCell({ asset, span }: { asset: Asset; span: 'normal' | 'large'
       <button
         {...attributes}
         {...listeners}
-        className="absolute top-2 left-2 h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border border-ink/[0.06] text-ink-700 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+        disabled={locked}
+        aria-label={locked ? t('mb.unlock') : 'Drag'}
+        className="absolute top-2 left-2 h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border border-ink/[0.06] text-ink-700 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
@@ -303,12 +426,18 @@ function MoodboardCell({ asset, span }: { asset: Asset; span: 'normal' | 'large'
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100">
         <button
           onClick={() => setLocked((l) => !l)}
-          className="h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border border-ink/[0.06] text-ink-700"
+          className={`h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border text-ink-700 ${
+            locked ? 'border-accent/40 text-accent' : 'border-ink/[0.06]'
+          }`}
           aria-label={locked ? t('mb.unlock') : t('mb.lock')}
         >
           {locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
         </button>
-        <button className="h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border border-ink/[0.06] text-ink-700">
+        <button
+          onClick={onRemove}
+          aria-label="Remove from board"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-xs bg-paper/90 border border-ink/[0.06] text-ink-700 hover:text-accent hover:border-accent/40"
+        >
           <X className="h-3 w-3" />
         </button>
       </div>
@@ -337,4 +466,64 @@ function BriefField({ title, children }: { title: string; children: React.ReactN
       {children}
     </section>
   )
+}
+
+function serializeBrief(b: CreativeBrief): string {
+  const lines: string[] = []
+  lines.push(`# ${b.title}`)
+  lines.push('')
+  lines.push(`> ${b.mood}`)
+  lines.push('')
+  if (b.visualKeywords?.length) {
+    lines.push('## Visual keywords')
+    lines.push(b.visualKeywords.join(', '))
+    lines.push('')
+  }
+  if (b.colorDirection) {
+    lines.push('## Color direction')
+    lines.push(b.colorDirection)
+    lines.push('')
+  }
+  if (b.typographyDirection) {
+    lines.push('## Typography')
+    lines.push(b.typographyDirection)
+    lines.push('')
+  }
+  if (b.imageDirection) {
+    lines.push('## Image style')
+    lines.push(b.imageDirection)
+    lines.push('')
+  }
+  if (b.layoutDirection) {
+    lines.push('## Layout')
+    lines.push(b.layoutDirection)
+    lines.push('')
+  }
+  if (b.materials?.length) {
+    lines.push('## Materials')
+    lines.push(b.materials.join(', '))
+    lines.push('')
+  }
+  if (b.composition) {
+    lines.push('## Composition')
+    lines.push(b.composition)
+    lines.push('')
+  }
+  if (b.avoid?.length) {
+    lines.push('## Avoid')
+    lines.push(b.avoid.map((a) => `- ${a}`).join('\n'))
+    lines.push('')
+  }
+  if (b.prompt) {
+    lines.push('## AI prompt')
+    lines.push('```')
+    lines.push(b.prompt)
+    lines.push('```')
+    lines.push('')
+  }
+  if (b.notes) {
+    lines.push('## Notes')
+    lines.push(b.notes)
+  }
+  return lines.join('\n')
 }

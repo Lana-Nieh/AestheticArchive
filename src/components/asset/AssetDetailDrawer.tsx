@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Heart,
   Star,
@@ -18,11 +19,14 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useUi } from '@/stores/uiStore'
+import { useFilters } from '@/stores/filterStore'
 import { assetAdapter, subscribeAssets } from '@/data/adapters/assetAdapter'
 import { collectionAdapter } from '@/data/adapters/collectionAdapter'
 import type { Asset } from '@/lib/types'
 import { cn, formatBytes, isLight, uid } from '@/lib/utils'
 import { useT, useRelativeTime } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
+import { copyText } from '@/lib/mockActions'
 
 export function AssetDetailDrawer() {
   const open = useUi((s) => s.assetDetailOpen)
@@ -30,8 +34,10 @@ export function AssetDetailDrawer() {
   const close = useUi((s) => s.closeAssetDetail)
   const openCollectionPicker = useUi((s) => s.openCollectionPicker)
   const setOpen = useUi((s) => s.openAssetDetail)
+  const setColorHex = useFilters((s) => s.setColorHex)
   const t = useT()
   const relativeTime = useRelativeTime()
+  const navigate = useNavigate()
 
   const [, setTick] = useState(0)
   useEffect(() => subscribeAssets(() => setTick((x) => x + 1)), [])
@@ -62,7 +68,10 @@ export function AssetDetailDrawer() {
       setEditingTitle(null)
     }
   }
-  const setRating = (r: 1 | 2 | 3 | 4 | 5) => assetAdapter.setRating(asset.id, r)
+  const setRating = (r: 1 | 2 | 3 | 4 | 5) => {
+    assetAdapter.setRating(asset.id, r)
+    toast({ kind: 'success', title: t('mock.rating.title', { n: r }) })
+  }
   const addUserTag = () => {
     const label = newTag.trim()
     if (!label) return
@@ -75,6 +84,50 @@ export function AssetDetailDrawer() {
   }
   const acceptAiTag = (tagId: string) => assetAdapter.acceptAiTag(asset.id, tagId)
   const removeTag = (tagId: string) => assetAdapter.removeTag(asset.id, tagId)
+
+  const findSimilar = () => {
+    close()
+    navigate(`/search?q=${encodeURIComponent(asset.title)}`)
+    toast.curator(t('mock.find_similar.title'), t('mock.find_similar.desc'))
+  }
+
+  const filterByColor = (hex: string) => {
+    setColorHex(hex)
+    close()
+    navigate('/archive')
+    toast({
+      kind: 'mock',
+      eyebrow: t('filters.refine'),
+      title: t('mock.color_filter.title', { hex: hex.toUpperCase() }),
+      description: t('mock.color_filter.desc'),
+    })
+  }
+
+  const generatePrompt = () => {
+    const palette = asset.colors
+      .slice(0, 4)
+      .map((c) => `${c.name ?? c.hex}`)
+      .join(', ')
+    const tagWords = [...asset.tags, ...asset.aiTags]
+      .slice(0, 6)
+      .map((t) => t.label)
+      .join(', ')
+    const prompt = `${asset.title} — ${asset.aiDescription ?? ''} Palette: ${palette}. Visual cues: ${tagWords}. Composition: editorial, natural daylight, calm.`
+    copyText(prompt, t('mock.generate_prompt.title'))
+    toast.curator(t('mock.generate_prompt.title'), t('mock.generate_prompt.desc'))
+  }
+
+  const addToBrief = () => {
+    toast.curator(t('mock.add_to_brief.title'), t('mock.add_to_brief.desc'))
+  }
+
+  const deleteAsset = () => {
+    const okMsg =
+      asset.title.length > 30 ? asset.title.slice(0, 27) + '…' : asset.title
+    assetAdapter.remove([asset.id])
+    close()
+    toast.mock(t('mock.delete_asset.title'), `${okMsg} · ${t('mock.delete_asset.desc')}`)
+  }
 
   return (
     <Drawer open={open} onOpenChange={(o) => !o && close()}>
@@ -118,7 +171,7 @@ export function AssetDetailDrawer() {
               </Button>
             </Tooltip>
             <Tooltip content={t('ad.find_similar')}>
-              <Button variant="ghost" size="icon-sm">
+              <Button variant="ghost" size="icon-sm" onClick={findSimilar}>
                 <SearchIcon className="h-4 w-4" strokeWidth={1.7} />
               </Button>
             </Tooltip>
@@ -219,10 +272,12 @@ export function AssetDetailDrawer() {
               <SectionHeader title={t('ad.dominant_palette')} hint={t('ad.colors_n', { n: asset.colors.length })} />
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3">
                 {asset.colors.map((c) => (
-                  <div
+                  <button
                     key={c.hex}
-                    className="flex items-center gap-2.5 group cursor-pointer"
-                    title={`Filter by ${c.hex}`}
+                    type="button"
+                    onClick={() => filterByColor(c.hex)}
+                    className="flex items-center gap-2.5 group cursor-pointer text-left rounded-xs px-1 -mx-1 py-0.5 -my-0.5 hover:bg-ink/[0.04] ring-focus"
+                    title={`Filter archive by ${c.hex}`}
                   >
                     <span
                       className="h-7 w-7 rounded-sm shrink-0"
@@ -239,7 +294,7 @@ export function AssetDetailDrawer() {
                         {c.hex} · {c.percentage}%
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </section>
@@ -338,9 +393,16 @@ export function AssetDetailDrawer() {
                 <SectionHeader title={t('ad.in_collections')} hint={`${collections.length}`} />
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {collections.map((c) => (
-                    <Badge key={c.id} variant="soft" size="md">
-                      {c.name}
-                    </Badge>
+                    <Link
+                      key={c.id}
+                      to={`/collections/${c.id}`}
+                      onClick={close}
+                      className="ring-focus rounded-sm"
+                    >
+                      <Badge variant="soft" size="md" className="hover:bg-ink/[0.07] transition-colors cursor-pointer">
+                        {c.name}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               </section>
@@ -371,16 +433,19 @@ export function AssetDetailDrawer() {
             {/* Bottom actions */}
             <section className="pt-2">
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="secondary" size="sm" className="justify-start">
+                <Button variant="secondary" size="sm" className="justify-start" onClick={generatePrompt}>
                   <Wand2 className="h-3.5 w-3.5" />
                   {t('ad.generate_prompt')}
                 </Button>
-                <Button variant="secondary" size="sm" className="justify-start">
+                <Button variant="secondary" size="sm" className="justify-start" onClick={addToBrief}>
                   <FileDown className="h-3.5 w-3.5" />
                   {t('ad.add_to_brief')}
                 </Button>
               </div>
-              <button className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-ink-600 hover:text-accent transition-colors">
+              <button
+                onClick={deleteAsset}
+                className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-ink-600 hover:text-accent transition-colors"
+              >
                 <Trash2 className="h-3 w-3" />
                 {t('ad.delete')}
               </button>

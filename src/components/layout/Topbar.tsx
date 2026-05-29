@@ -56,7 +56,12 @@ export function Topbar() {
             </Button>
           </Tooltip>
           <Tooltip content={t('top.ask_agent')}>
-            <Button variant="ghost" size="icon" aria-label={t('top.agent')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/agent')}
+              aria-label={t('top.agent')}
+            >
               <Sparkles className="h-[15px] w-[15px]" strokeWidth={1.6} />
             </Button>
           </Tooltip>

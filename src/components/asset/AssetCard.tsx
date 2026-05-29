@@ -3,6 +3,7 @@ import { Heart, Star, Check, Plus, MoreHorizontal, ExternalLink } from 'lucide-r
 import { cn, isLight } from '@/lib/utils'
 import type { Asset } from '@/lib/types'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 type Props = {
   asset: Asset
@@ -116,7 +117,18 @@ function AssetCardBase({
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={1.8} />
           </IconBtn>
-          <IconBtn label={t('common.more')}>
+          <IconBtn
+            label={t('common.more')}
+            onClick={(e) => {
+              e.stopPropagation()
+              toast({
+                kind: 'mock',
+                eyebrow: t('common.more'),
+                title: asset.title,
+                description: t('mock.not_yet'),
+              })
+            }}
+          >
             <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.8} />
           </IconBtn>
         </div>
@@ -143,12 +155,24 @@ function AssetCardBase({
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11.5px] truncate">{asset.title}</span>
-            {asset.sourceLabel && (
-              <span className="mono text-[10px] uppercase tracking-widest opacity-80 inline-flex items-center gap-1">
-                <ExternalLink className="h-2.5 w-2.5" />
-                {asset.sourceLabel}
-              </span>
-            )}
+            {asset.sourceLabel &&
+              (asset.sourceUrl ? (
+                <a
+                  href={asset.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mono text-[10px] uppercase tracking-widest opacity-80 hover:opacity-100 inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  {asset.sourceLabel}
+                </a>
+              ) : (
+                <span className="mono text-[10px] uppercase tracking-widest opacity-80 inline-flex items-center gap-1">
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  {asset.sourceLabel}
+                </span>
+              ))}
           </div>
           <div className="mt-1.5 flex items-center gap-1 flex-wrap">
             {[...asset.tags, ...asset.aiTags].slice(0, 4).map((t) => (

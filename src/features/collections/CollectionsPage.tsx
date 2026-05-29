@@ -1,19 +1,38 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Sparkles } from 'lucide-react'
 import { CollectionCard } from '@/components/collection/CollectionCard'
 import { Button } from '@/components/ui/Button'
 import { collectionAdapter, subscribeCollections } from '@/data/adapters/collectionAdapter'
 import { Badge } from '@/components/ui/Badge'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 export function CollectionsPage() {
   const [, setTick] = useState(0)
   useEffect(() => subscribeCollections(() => setTick((x) => x + 1)), [])
   const t = useT()
+  const navigate = useNavigate()
 
   const all = collectionAdapter.list()
   const suggested = all.filter((c) => c.isAiSuggested)
   const mine = all.filter((c) => !c.isAiSuggested)
+
+  const newShelf = () => {
+    const name = window.prompt(t('prompt.collection_name'), '')
+    const trimmed = name?.trim()
+    if (!trimmed) return
+    const c = collectionAdapter.create({ name: trimmed })
+    toast.success(t('mock.rename.title'), trimmed)
+    navigate(`/collections/${c.id}`)
+  }
+
+  const manageSuggested = () => {
+    toast.curator(
+      t('mock.manage_suggested.title'),
+      t('mock.manage_suggested.desc')
+    )
+  }
 
   return (
     <div className="px-7 py-8 max-w-[1400px] mx-auto">
@@ -27,7 +46,7 @@ export function CollectionsPage() {
             {t('collections.body')}
           </p>
         </div>
-        <Button variant="primary" size="sm">
+        <Button variant="primary" size="sm" onClick={newShelf}>
           <Plus className="h-3.5 w-3.5" />
           {t('collections.new')}
         </Button>
@@ -41,7 +60,13 @@ export function CollectionsPage() {
               <h2 className="eyebrow text-accent-600">{t('collections.suggested')}</h2>
               <Badge variant="ai" size="xs">{suggested.length}</Badge>
             </div>
-            <a href="#" className="text-[12px] text-ink-600 hover:text-ink">{t('collections.manage')}</a>
+            <button
+              type="button"
+              onClick={manageSuggested}
+              className="text-[12px] text-ink-600 hover:text-ink"
+            >
+              {t('collections.manage')}
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {suggested.map((c) => (

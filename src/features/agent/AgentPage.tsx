@@ -21,8 +21,9 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { mockAgentTasks } from '@/data/mock/tasks'
 import type { AgentTask, AgentTaskStatus, AgentTaskType } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { cn, uid } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 const typeIcon: Record<AgentTaskType, React.ReactNode> = {
   auto_tag: <TagIcon className="h-3.5 w-3.5" strokeWidth={1.8} />,
@@ -46,13 +47,62 @@ const statusKey: Record<AgentTaskStatus, string> = {
 export function AgentPage() {
   const [tasks, setTasks] = useState<AgentTask[]>(mockAgentTasks)
   const [expanded, setExpanded] = useState<string | null>(tasks[0]?.id ?? null)
+  const [selectedLauncher, setSelectedLauncher] = useState<AgentTaskType>('suggest_collections')
   const t = useT()
 
   const update = (id: string, patch: Partial<AgentTask>) =>
-    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    setTasks((ts) => ts.map((tk) => (tk.id === id ? { ...tk, ...patch } : tk)))
 
-  const active = tasks.filter((t) => t.status !== 'accepted' && t.status !== 'ignored')
-  const done = tasks.filter((t) => t.status === 'accepted' || t.status === 'ignored')
+  const active = tasks.filter((tk) => tk.status !== 'accepted' && tk.status !== 'ignored')
+  const done = tasks.filter((tk) => tk.status === 'accepted' || tk.status === 'ignored')
+
+  const countByType = (type: AgentTaskType) => active.filter((tk) => tk.type === type).length
+
+  const launcherDesc = (type: AgentTaskType, descKey: string) => {
+    const n = countByType(type)
+    if (n === 0) return t('agent.launcher.none_desc')
+    return t(descKey, { n })
+  }
+
+  const queueLauncher = (type: AgentTaskType, labelKey: string, descKey: string) => {
+    setSelectedLauncher(type)
+    const id = uid('task')
+    const nextCount = countByType(type) + 1
+    const scope = t(descKey, { n: nextCount })
+    const task: AgentTask = {
+      id,
+      type,
+      title: t(labelKey),
+      scope,
+      plan: [
+        'Curator scans the relevant assets',
+        'Surfaces a plan with low-risk defaults',
+        'Waits for your accept or edit before applying',
+      ],
+      preview: scope,
+      explanation:
+        'Mock — in a real build this would be computed by the curator. The plan is editable until you accept.',
+      confidence: 0.78,
+      status: 'previewing',
+      createdAt: new Date().toISOString(),
+    }
+    setTasks((ts) => [task, ...ts])
+    setExpanded(id)
+    toast.curator(
+      t('mock.agent_launcher.queued.title'),
+      t('mock.agent_launcher.queued.desc')
+    )
+  }
+
+  const undoDone = (id: string) => {
+    update(id, { status: 'previewing' })
+    setExpanded(id)
+    toast({ kind: 'success', title: t('mock.agent_undo.title') })
+  }
+
+  const editPlan = () => {
+    toast.curator(t('mock.agent_edit_plan.title'), t('mock.agent_edit_plan.desc'))
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto px-7 py-10">
@@ -73,10 +123,54 @@ export function AgentPage() {
       <section className="mb-10">
         <div className="eyebrow mb-3">{t('agent.quick')}</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Launcher icon={<TagIcon className="h-4 w-4" />} label={t('agent.launcher.auto_tag')} desc={t('agent.launcher.auto_tag_desc')} />
-          <Launcher icon={<FolderPlus className="h-4 w-4" />} label={t('agent.launcher.suggest')} desc={t('agent.launcher.suggest_desc')} accent />
-          <Launcher icon={<Copy className="h-4 w-4" />} label={t('agent.launcher.duplicates')} desc={t('agent.launcher.duplicates_desc')} />
-          <Launcher icon={<Compass className="h-4 w-4" />} label={t('agent.launcher.refresh')} desc={t('agent.launcher.refresh_desc')} />
+          <Launcher
+            icon={<TagIcon className="h-4 w-4" />}
+            label={t('agent.launcher.auto_tag')}
+            desc={launcherDesc('auto_tag', 'agent.launcher.auto_tag_desc')}
+            accent={selectedLauncher === 'auto_tag'}
+            onClick={() =>
+              queueLauncher('auto_tag', 'agent.launcher.auto_tag', 'agent.launcher.auto_tag_desc')
+            }
+          />
+          <Launcher
+            icon={<FolderPlus className="h-4 w-4" />}
+            label={t('agent.launcher.suggest')}
+            desc={launcherDesc('suggest_collections', 'agent.launcher.suggest_desc')}
+            accent={selectedLauncher === 'suggest_collections'}
+            onClick={() =>
+              queueLauncher(
+                'suggest_collections',
+                'agent.launcher.suggest',
+                'agent.launcher.suggest_desc'
+              )
+            }
+          />
+          <Launcher
+            icon={<Copy className="h-4 w-4" />}
+            label={t('agent.launcher.duplicates')}
+            desc={launcherDesc('clean_duplicates', 'agent.launcher.duplicates_desc')}
+            accent={selectedLauncher === 'clean_duplicates'}
+            onClick={() =>
+              queueLauncher(
+                'clean_duplicates',
+                'agent.launcher.duplicates',
+                'agent.launcher.duplicates_desc'
+              )
+            }
+          />
+          <Launcher
+            icon={<Compass className="h-4 w-4" />}
+            label={t('agent.launcher.refresh')}
+            desc={t('agent.launcher.refresh_desc')}
+            accent={selectedLauncher === 'update_profile'}
+            onClick={() =>
+              queueLauncher(
+                'update_profile',
+                'agent.launcher.refresh',
+                'agent.launcher.refresh_desc'
+              )
+            }
+          />
         </div>
       </section>
 
@@ -95,8 +189,12 @@ export function AgentPage() {
               task={task}
               expanded={expanded === task.id}
               onToggle={() => setExpanded(expanded === task.id ? null : task.id)}
-              onAccept={() => update(task.id, { status: 'accepted' })}
+              onAccept={() => {
+                update(task.id, { status: 'accepted' })
+                toast.success(task.title, t('agent.status.accepted'))
+              }}
               onIgnore={() => update(task.id, { status: 'ignored' })}
+              onEditPlan={editPlan}
             />
           ))}
         </div>
@@ -120,7 +218,7 @@ export function AgentPage() {
                     </div>
                   </div>
                 </div>
-                <Button variant="ghost" size="xs">
+                <Button variant="ghost" size="xs" onClick={() => undoDone(task.id)}>
                   <Undo2 className="h-3 w-3" />
                   {t('agent.undo')}
                 </Button>
@@ -139,12 +237,14 @@ function TaskCard({
   onToggle,
   onAccept,
   onIgnore,
+  onEditPlan,
 }: {
   task: AgentTask
   expanded: boolean
   onToggle: () => void
   onAccept: () => void
   onIgnore: () => void
+  onEditPlan: () => void
 }) {
   const t = useT()
   return (
@@ -226,7 +326,7 @@ function TaskCard({
                 <Check className="h-3.5 w-3.5" />
                 {t('agent.accept_run')}
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={onEditPlan}>
                 <Pencil className="h-3.5 w-3.5" />
                 {t('agent.edit_plan')}
               </Button>
@@ -250,16 +350,20 @@ function Launcher({
   label,
   desc,
   accent,
+  onClick,
 }: {
   icon: React.ReactNode
   label: string
   desc: string
   accent?: boolean
+  onClick?: () => void
 }) {
   return (
     <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        'group text-left rounded-md border bg-paper p-4 transition-colors',
+        'group text-left rounded-md border bg-paper p-4 transition-colors ring-focus',
         accent
           ? 'border-accent/30 hover:border-accent/60'
           : 'border-ink/[0.08] hover:border-ink/[0.2]'

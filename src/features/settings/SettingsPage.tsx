@@ -1,9 +1,10 @@
-import { Sparkles, Keyboard, Moon, Database, Shield, Languages } from 'lucide-react'
+import { Sparkles, Keyboard, Moon, Database, Shield, Languages, ChevronRight } from 'lucide-react'
 import { Kbd } from '@/components/ui/Kbd'
 import { useT } from '@/lib/i18n'
 import { useTheme, type ThemeMode } from '@/stores/themeStore'
 import { useLanguage, type Language } from '@/stores/languageStore'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/Toast'
 
 export function SettingsPage() {
   const t = useT()
@@ -64,16 +65,24 @@ export function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {sections.map((s) => (
-          <div
+          <button
+            type="button"
             key={s.title}
-            className="rounded-md border border-ink/[0.06] bg-paper p-5"
+            onClick={() =>
+              toast.mock(
+                t('mock.settings_section.title', { section: s.title }),
+                t('mock.settings_section.desc')
+              )
+            }
+            className="group text-left rounded-md border border-ink/[0.06] bg-paper p-5 hover:border-ink/[0.16] transition-colors ring-focus"
           >
             <div className="flex items-center gap-2 mb-2">
               {s.icon}
               <h3 className="serif text-[20px] tracking-editorial text-ink leading-tight">{s.title}</h3>
+              <ChevronRight className="ml-auto h-3.5 w-3.5 text-ink-600 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="text-[13px] text-ink-600 leading-snug">{s.desc}</p>
-          </div>
+          </button>
         ))}
       </div>
 

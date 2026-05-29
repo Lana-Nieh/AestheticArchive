@@ -5,26 +5,62 @@ import {
   TrendingUp,
   TrendingDown,
   Pin,
-  EyeOff,
   RotateCw,
   Download,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { profileAdapter, subscribeProfile } from '@/data/adapters/profileAdapter'
 import { isLight } from '@/lib/utils'
 import { mockAssets } from '@/data/mock/assets'
 import { cn } from '@/lib/utils'
 import { useT, useRelativeTime } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
+import { useFilters } from '@/stores/filterStore'
 
 export function ProfilePage() {
   const navigate = useNavigate()
+  const setColorHex = useFilters((s) => s.setColorHex)
   const [, setTick] = useState(0)
   useEffect(() => subscribeProfile(() => setTick((x) => x + 1)), [])
   const t = useT()
   const relativeTime = useRelativeTime()
 
   const profile = profileAdapter.get()
+
+  const refreshProfile = () => {
+    toast.curator(
+      t('mock.profile_refresh.title'),
+      t('mock.profile_refresh.desc')
+    )
+  }
+
+  const applyLens = () => {
+    toast.curator(t('mock.profile_lens.title'), t('mock.profile_lens.desc'))
+    navigate('/search')
+  }
+
+  const exportProfile = () => {
+    toast.mock(t('mock.profile_export.title'), t('mock.profile_export.desc'))
+  }
+
+  const filterByColor = (hex: string) => {
+    setColorHex(hex)
+    navigate('/archive')
+    toast({
+      kind: 'mock',
+      eyebrow: t('filters.refine'),
+      title: t('mock.color_filter.title', { hex: hex.toUpperCase() }),
+      description: t('mock.color_filter.desc'),
+    })
+  }
+
+  const openCluster = (label: string) => {
+    toast.curator(
+      t('mock.cluster_open.title'),
+      t('mock.cluster_open.desc', { label })
+    )
+    navigate(`/search?q=${encodeURIComponent(label)}`)
+  }
 
   // Image clusters: pick a few representative assets for each "cluster"
   const clusters = [
@@ -60,15 +96,15 @@ export function ProfilePage() {
             </p>
 
             <div className="mt-6 flex items-center gap-2 flex-wrap">
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={refreshProfile}>
                 <RotateCw className="h-3.5 w-3.5" />
                 {t('profile.refresh')}
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={applyLens}>
                 <Sparkles className="h-3.5 w-3.5" />
                 {t('profile.apply_lens')}
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={exportProfile}>
                 <Download className="h-3.5 w-3.5" />
                 {t('profile.export')}
               </Button>
@@ -102,10 +138,13 @@ export function ProfilePage() {
               const max = profile.colorPreferences[0].weight
               const w = Math.round((c.weight / max) * 100)
               return (
-                <div
+                <button
                   key={c.hex}
+                  type="button"
+                  onClick={() => filterByColor(c.hex)}
+                  title={t('mock.color_filter.title', { hex: c.hex.toUpperCase() })}
                   className={cn(
-                    'group rounded-md overflow-hidden border border-ink/[0.06] bg-paper hover:border-ink/[0.18] transition-colors',
+                    'group rounded-md overflow-hidden border border-ink/[0.06] bg-paper hover:border-ink/[0.18] transition-colors text-left ring-focus',
                     i === 0 && 'col-span-2'
                   )}
                 >
@@ -130,7 +169,7 @@ export function ProfilePage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -143,18 +182,21 @@ export function ProfilePage() {
             eyebrow={t('profile.style_eyebrow')}
             items={profile.styleKeywords}
             onClick={(label) => navigate(`/search?q=${encodeURIComponent(label)}`)}
+            onPin={(label) => profileAdapter.togglePin('styleKeywords', label)}
           />
           <KeywordGroup
             title={t('profile.mood_title')}
             eyebrow={t('profile.mood_eyebrow')}
             items={profile.moodKeywords}
             onClick={(label) => navigate(`/search?q=${encodeURIComponent(label)}`)}
+            onPin={(label) => profileAdapter.togglePin('moodKeywords', label)}
           />
           <KeywordGroup
             title={t('profile.material_title')}
             eyebrow={t('profile.material_eyebrow')}
             items={profile.materialPreferences}
             onClick={(label) => navigate(`/search?q=${encodeURIComponent(label)}`)}
+            onPin={(label) => profileAdapter.togglePin('materialPreferences', label)}
           />
         </section>
 
@@ -184,7 +226,12 @@ export function ProfilePage() {
             {clusters.map((c) => {
               const assets = c.assetIds.map((id) => mockAssets.find((a) => a.id === id)).filter(Boolean)
               return (
-                <div key={c.title} className="rounded-md border border-ink/[0.06] bg-paper overflow-hidden">
+                <button
+                  key={c.title}
+                  type="button"
+                  onClick={() => openCluster(c.title)}
+                  className="text-left rounded-md border border-ink/[0.06] bg-paper overflow-hidden hover:border-ink/[0.18] transition-colors ring-focus"
+                >
                   <div className="grid grid-cols-2 gap-px bg-paper-200 aspect-[5/3]">
                     {assets.slice(0, 4).map((a) => (
                       <img key={a!.id} src={a!.thumbnailUrl} alt="" className="w-full h-full object-cover" />
@@ -196,7 +243,7 @@ export function ProfilePage() {
                     </h3>
                     <p className="text-[12.5px] text-ink-600 mt-1.5 leading-snug">{c.desc}</p>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -266,11 +313,13 @@ function KeywordGroup({
   eyebrow,
   items,
   onClick,
+  onPin,
 }: {
   title: string
   eyebrow: string
   items: { label: string; weight: number; pinned?: boolean; hidden?: boolean; delta?: number }[]
   onClick: (label: string) => void
+  onPin: (label: string) => void
 }) {
   const t = useT()
   return (
@@ -286,7 +335,7 @@ function KeywordGroup({
               <div key={k.label} className="group relative inline-flex items-center">
                 <button
                   onClick={() => onClick(k.label)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border border-ink/[0.10] bg-paper hover:border-ink/[0.24] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border border-ink/[0.10] bg-paper hover:border-ink/[0.24] transition-colors ring-focus"
                   style={{ fontSize }}
                 >
                   {k.pinned && <Pin className="h-2.5 w-2.5 text-accent fill-accent" strokeWidth={2} />}
@@ -302,6 +351,22 @@ function KeywordGroup({
                       {Math.round(k.delta * 100)}%
                     </span>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onPin(k.label)
+                  }}
+                  aria-label={k.pinned ? 'Unpin' : 'Pin'}
+                  className={cn(
+                    'absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full border border-ink/[0.12] bg-paper inline-flex items-center justify-center transition-opacity ring-focus',
+                    k.pinned
+                      ? 'opacity-100 text-accent border-accent/40'
+                      : 'opacity-0 group-hover:opacity-100 text-ink-600 hover:text-ink'
+                  )}
+                >
+                  <Pin className={cn('h-2 w-2', k.pinned && 'fill-accent')} strokeWidth={2} />
                 </button>
               </div>
             )

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { TooltipProvider } from '@/components/ui/Tooltip'
+import { Toaster } from '@/components/ui/Toast'
 import { useLang } from '@/lib/i18n'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { ArchivePage } from '@/features/archive/ArchivePage'
@@ -63,6 +64,7 @@ export default function App() {
       <CollectionPicker />
       <BulkActionBar />
       <CommandMenu />
+      <Toaster />
     </TooltipProvider>
   )
 }

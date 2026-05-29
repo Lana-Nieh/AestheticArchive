@@ -1,19 +1,49 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, ArrowUpRight, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { projectAdapter, subscribeProjects } from '@/data/adapters/projectAdapter'
 import { assetAdapter } from '@/data/adapters/assetAdapter'
 import { useT, useRelativeTime } from '@/lib/i18n'
+import { toast } from '@/components/ui/Toast'
 
 export function ProjectsPage() {
   const [, setTick] = useState(0)
   useEffect(() => subscribeProjects(() => setTick((x) => x + 1)), [])
   const t = useT()
   const relativeTime = useRelativeTime()
+  const navigate = useNavigate()
 
   const projects = projectAdapter.listProjects()
+
+  const newProject = () => {
+    const name = window.prompt(t('prompt.project_name'), '')
+    const trimmed = name?.trim()
+    if (!trimmed) return
+    const p = projectAdapter.createProject({ name: trimmed, status: 'exploring' })
+    toast.success(
+      t('mock.created_project.title'),
+      t('mock.created_project.desc')
+    )
+    navigate(`/projects/${p.id}`)
+  }
+
+  const fromFeeling = () => {
+    const feeling = window.prompt(t('prompt.feeling'), '')
+    const trimmed = feeling?.trim()
+    if (!trimmed) {
+      toast.curator(t('mock.from_feeling.title'), t('mock.from_feeling.desc'))
+      return
+    }
+    const p = projectAdapter.createProject({
+      name: trimmed,
+      description: trimmed,
+      status: 'exploring',
+    })
+    toast.curator(t('mock.from_feeling.title'), t('mock.from_feeling.desc'))
+    navigate(`/projects/${p.id}`)
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-7 py-10">
@@ -28,11 +58,11 @@ export function ProjectsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={fromFeeling}>
             <Wand2 className="h-3.5 w-3.5" />
             {t('projects.from_feeling')}
           </Button>
-          <Button variant="primary" size="sm">
+          <Button variant="primary" size="sm" onClick={newProject}>
             <Plus className="h-3.5 w-3.5" />
             {t('projects.new')}
           </Button>
